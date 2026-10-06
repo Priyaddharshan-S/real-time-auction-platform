@@ -1,0 +1,23 @@
+# Render Blueprint: New + -> Blueprint -> pick this repo. Secrets are typed in the Render dashboard.
+services:
+  - type: web
+    name: live-auction
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore          # choose the Render region closest to your Supabase project
+    healthCheckPath: /healthz
+    autoDeploy: true           # every push to the connected branch redeploys
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: DATABASE_URL      # Supabase Transaction pooler URL (port 6543)
+        sync: false
+      - key: REDIS_URL         # Upstash TCP URL, starts with rediss://
+        sync: false
+      - key: SUPABASE_URL      # https://xxxx.supabase.co
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: ADMIN_EMAIL       # this account becomes the first admin
+        sync: false

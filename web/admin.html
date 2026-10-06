@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin · Live Auctions</title><link rel="stylesheet" href="/style.css">
+<style>
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:8px 0;position:sticky;top:49px;background:var(--bg);z-index:4}
+.tabs button{white-space:nowrap}.tabs .on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.wrap{overflow-x:auto;background:var(--card);border:1px solid var(--bd);border-radius:10px;margin:8px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:8px;border-bottom:1px solid var(--bd);text-align:left;white-space:nowrap}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.stat{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px}.stat b{display:block;font-size:24px}
+.bar{display:flex;align-items:flex-end;gap:3px;height:60px;margin-top:6px}.bar i{flex:1;background:var(--pri);min-height:2px;border-radius:2px}
+.sm{padding:5px 9px;font-size:13px;margin:2px}.danger{color:var(--bad);border-color:var(--bad)}
+label{display:block;font-size:13px;color:var(--mut);margin-top:6px}.pill{padding:2px 8px;border-radius:99px;background:var(--bd);font-size:12px}
+.st-ok{color:var(--ok)}.st-bad{color:var(--bad)}select{width:100%;padding:10px;font-size:16px;border-radius:8px;background:var(--card);color:var(--ink);border:1px solid var(--bd)}
+</style></head>
+<body>
+<header><a href="/admin" class="logo">🔨 Admin</a><nav><a href="/" class="btn sm">← Site</a></nav></header>
+<main><div class="tabs" id="tabs"></div><div id="view">Loading…</div></main><div id="toasts"></div>
+<script src="/admin.js"></script>
+</body></html>

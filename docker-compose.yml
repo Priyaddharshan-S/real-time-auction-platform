@@ -1,0 +1,28 @@
+# LOCAL DEVELOPMENT ONLY. Production runs on Render (see render.yaml).
+# Starts the app + a throwaway Postgres + Redis. Login still uses your real
+# Supabase project, so SUPABASE_URL / SUPABASE_ANON_KEY / ADMIN_EMAIL come from .env.
+#   docker compose up --build        then open http://localhost:8080
+services:
+  app:
+    build: .
+    ports: ["8080:8080"]
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgresql://auction:auction@db:5432/auction?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      SUPABASE_URL: ${SUPABASE_URL:?set SUPABASE_URL in .env}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:?set SUPABASE_ANON_KEY in .env}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?set ADMIN_EMAIL in .env}
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+  db:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: auction, POSTGRES_PASSWORD: auction, POSTGRES_DB: auction }
+    volumes: ["dbdata:/var/lib/postgresql/data"]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U auction"], interval: 5s, timeout: 3s, retries: 10 }
+  redis:
+    image: redis:7-alpine
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 5s, timeout: 3s, retries: 10 }
+volumes:
+  dbdata:
