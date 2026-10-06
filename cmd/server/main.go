@@ -49,6 +49,11 @@ func main() {
 		os.Exit(healthcheck())
 	}
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	t0 := time.Now()
+	step := func(name string) { // shows exactly which startup stage is slow in the Render logs
+		slog.Info("startup", "step", name, "elapsed_ms", time.Since(t0).Milliseconds())
+	}
+	step("process started")
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -66,21 +71,25 @@ func main() {
 		os.Exit(1)
 	}
 	defer st.Close()
+	step("database and redis connected")
 
 	if err := st.Migrate(ctx, migrations.FS); err != nil {
 		slog.Error("migrate error", "err", err)
 		os.Exit(1)
 	}
+	step("migrations done")
 	if err := st.SeedDemoAuctions(ctx); err != nil {
 		slog.Error("seed error", "err", err)
 		os.Exit(1)
 	}
 
+	step("demo data checked")
 	verifier, err := auth.NewVerifier(ctx, cfg.SupabaseURL)
 	if err != nil {
 		slog.Error("auth error (check SUPABASE_URL and that the project uses JWT signing keys)", "err", err)
 		os.Exit(1)
 	}
+	step("auth keys loaded")
 	am := auth.NewMiddleware(st.DB, verifier, cfg.AdminEmail)
 
 	as := auction.NewStore(st.DB, st.Redis)
@@ -93,6 +102,7 @@ func main() {
 		os.Exit(1)
 	}
 	hub.Start()
+	step("realtime hub ready")
 	adm := admin.New(as, hub, cfg.DatabaseURL)
 
 	// Background worker: starts scheduled auctions, closes expired ones.
@@ -106,14 +116,20 @@ func main() {
 	// Order matters: Logger wraps Recoverer so a panic is logged as a 500.
 	r.Use(middleware.RequestID, httpx.Logger, httpx.Recoverer, httpx.SecurityHeaders(cfg.SupabaseURL))
 
-	r.Get("/healthz", func(w http.ResponseWriter, req *http.Request) {
+	// Liveness: answers instantly and never touches Postgres/Redis, so a brief
+	// outage of an external service cannot make Render fail or restart a deploy.
+	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	})
+	// Readiness: the deep check (database always, Redis at most once a minute).
+	r.Get("/readyz", func(w http.ResponseWriter, req *http.Request) {
 		dbErr, redisErr := st.HealthCached(req.Context())
 		if dbErr != nil || redisErr != nil {
-			slog.Warn("unhealthy", "db", dbErr, "redis", redisErr)
-			httpx.WriteJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "unhealthy"})
+			slog.Warn("not ready", "db", dbErr, "redis", redisErr)
+			httpx.WriteJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "not ready"})
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+		httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 	})
 
 	r.Group(func(r chi.Router) {
